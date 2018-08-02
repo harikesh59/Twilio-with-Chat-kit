@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "896417950884",
+    "firebase_url": "https://medikoe-connect.firebaseio.com",
+    "project_id": "medikoe-connect",
+    "storage_bucket": "medikoe-connect.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:896417950884:android:1e51fee9dfa0ee05",
+        "android_client_info": {
+          "package_name": "com.twilio.chat.demo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "896417950884-fq82q465midn618s1fpblltfddimm78a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFKD2l2cUeEIy6-lpjlYuDYQ95Cp32uLw"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

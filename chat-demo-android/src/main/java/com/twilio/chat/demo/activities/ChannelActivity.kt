@@ -29,11 +29,20 @@ import org.json.JSONObject
 import org.json.JSONException
 import ChatCallbackListener
 import ToastStatusListener
+import android.widget.ImageView
+import com.stfalcon.chatkit.commons.ImageLoader
+import com.stfalcon.chatkit.commons.models.IDialog
+import com.stfalcon.chatkit.commons.models.IMessage
+import com.stfalcon.chatkit.dialogs.DialogsListAdapter
+import com.twilio.chat.demo.R.menu.channel
 
 class ChannelActivity : Activity(), ChatClientListener, AnkoLogger {
     private lateinit var basicClient: BasicChatClient
     private val channels = HashMap<String, ChannelModel>()
     private lateinit var adapter: SimpleRecyclerAdapter<ChannelModel>
+
+//    private lateinit var adapter: DialogsListAdapter<ChannelModel>
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -154,6 +163,8 @@ class ChannelActivity : Activity(), ChatClientListener, AnkoLogger {
     }
 
     private fun setupListView() {
+
+
         adapter = SimpleRecyclerAdapter(
                 ItemClickListener { channel: ChannelModel, _, _ ->
                     if (channel.status == Channel.ChannelStatus.JOINED) {

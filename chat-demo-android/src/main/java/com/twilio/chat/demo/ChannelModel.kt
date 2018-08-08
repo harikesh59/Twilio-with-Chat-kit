@@ -1,11 +1,12 @@
 package com.twilio.chat.demo
 
 import com.twilio.chat.*
-import java.util.Date
 import com.twilio.chat.Channel.ChannelStatus
 import com.twilio.chat.Channel.ChannelType
+import java.util.*
 
-class ChannelModel {
+open class ChannelModel {
+
     private var channel: Channel? = null
     private var channelDescriptor: ChannelDescriptor? = null
 
@@ -16,6 +17,7 @@ class ChannelModel {
     constructor(channel_: ChannelDescriptor) {
         channelDescriptor = channel_
     }
+
 
     val friendlyName: String
         get() {

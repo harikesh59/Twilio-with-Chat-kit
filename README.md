@@ -1,8 +1,5 @@
-# Chat Demo Application Overview
+# Chat Application Overview
 
-## This is Kotlin version of the Demo app
-
-For the Java version you can look [here](https://github.com/twilio/twilio-chat-demo-android/tree/java).
 
 ![](https://img.shields.io/badge/SDK%20version-3.1.0-blue.svg)
 

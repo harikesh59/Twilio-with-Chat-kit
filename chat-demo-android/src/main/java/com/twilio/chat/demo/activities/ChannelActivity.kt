@@ -159,7 +159,7 @@ class ChannelActivity : Activity(), ChatClientListener, AnkoLogger {
                     if (channel.status == Channel.ChannelStatus.JOINED) {
                         Handler().postDelayed({
                             channel.getChannel(ChatCallbackListener<Channel>() {
-                                startActivity<MessageActivity>(
+                                startActivity<MessageActivityNew>(
                                     Constants.EXTRA_CHANNEL to it,
                                     Constants.EXTRA_CHANNEL_SID to it.sid
                                 )

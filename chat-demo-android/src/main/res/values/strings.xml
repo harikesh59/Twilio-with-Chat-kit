@@ -46,4 +46,7 @@
     <string name="title_add_channel">Create channel</string>
     <string name="title_find_channel">Find channel</string>
     <string name="search">Search</string>
+    <string name="hint_enter_a_message">Enter a Message</string>
+    <string name="date_header_today">Today</string>
+    <string name="date_header_yesterday">Yesterday</string>
 </resources>

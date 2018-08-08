@@ -15,6 +15,7 @@ import com.twilio.chat.demo.Constants
 import com.twilio.chat.demo.R
 import com.twilio.chat.demo.TwilioApplication
 import com.twilio.chat.demo.activities.MessageActivity
+import com.twilio.chat.demo.activities.MessageActivityNew
 import org.jetbrains.anko.*
 
 class FCMListenerService : FirebaseMessagingService(), AnkoLogger {
@@ -51,7 +52,7 @@ class FCMListenerService : FirebaseMessagingService(), AnkoLogger {
                 title = "Twilio: Removed from Channel"
 
             // Set up action Intent
-            val intent = Intent(this, MessageActivity::class.java)
+            val intent = Intent(this, MessageActivityNew::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
             val cSid = payload.channelSid

@@ -9,49 +9,62 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Parcelable
 import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
-import android.view.ViewManager
 import android.widget.Toast
+import com.squareup.picasso.Picasso
+import com.stfalcon.chatkit.commons.ImageLoader
+import com.stfalcon.chatkit.commons.models.IMessage
+import com.stfalcon.chatkit.commons.models.IUser
+import com.stfalcon.chatkit.commons.models.MessageContentType
 import com.stfalcon.chatkit.messages.MessageInput
+import com.stfalcon.chatkit.messages.MessagesListAdapter
+import com.stfalcon.chatkit.utils.DateFormatter
 import com.twilio.chat.*
 import com.twilio.chat.Channel.ChannelType
 import com.twilio.chat.demo.Constants
 import com.twilio.chat.demo.R
 import com.twilio.chat.demo.TwilioApplication
+import com.twilio.chat.demo.models.Author
 import com.twilio.chat.demo.services.MediaService
 import com.twilio.chat.demo.views.MemberViewHolder
-import com.twilio.chat.demo.views.MessageViewHolder
 import eu.inloop.simplerecycleradapter.ItemClickListener
-import eu.inloop.simplerecycleradapter.ItemLongClickListener
 import eu.inloop.simplerecycleradapter.SettableViewHolder
 import eu.inloop.simplerecycleradapter.SimpleRecyclerAdapter
 import kotlinx.android.synthetic.main.activity_message.*
 import org.jetbrains.anko.*
-import org.jetbrains.anko.custom.ankoView
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.*
 
-// RecyclerView Anko
-fun ViewManager.recyclerView() = recyclerView(theme = 0) {}
 
-inline fun ViewManager.recyclerView(init: RecyclerView.() -> Unit): RecyclerView {
-    return ankoView({ RecyclerView(it) }, theme = 0, init = init)
-}
+//// RecyclerView Anko
+//fun ViewManager.recyclerView() = recyclerView(theme = 0) {}
+//
+//inline fun ViewManager.recyclerView(init: RecyclerView.() -> Unit): RecyclerView {
+//    return ankoView({ RecyclerView(it) }, theme = 0, init = init)
+//}
+//
+//fun ViewManager.recyclerView(theme: Int = 0) = recyclerView(theme) {}
+//
+//inline fun ViewManager.recyclerView(theme: Int = 0, init: RecyclerView.() -> Unit): RecyclerView {
+//    return ankoView({ RecyclerView(it) }, theme, init)
+//}
+//// End RecyclerView Anko
 
-fun ViewManager.recyclerView(theme: Int = 0) = recyclerView(theme) {}
 
-inline fun ViewManager.recyclerView(theme: Int = 0, init: RecyclerView.() -> Unit): RecyclerView {
-    return ankoView({ RecyclerView(it) }, theme, init)
-}
-// End RecyclerView Anko
+class MessageActivityNew : Activity(), ChannelListener, AnkoLogger, MessagesListAdapter.SelectionListener, DateFormatter.Formatter {
 
+//    override fun onLoadMore(page: Int, totalItemsCount: Int) {
+//        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//    }
 
-class MessageActivity : Activity(), ChannelListener, AnkoLogger {
-    private lateinit var adapter: SimpleRecyclerAdapter<MessageItem>
+    override fun onSelectionChanged(count: Int) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    private lateinit var adapter: MessagesListAdapter<MessageItem>
     private var channel: Channel? = null
 
     private val messageItemList = ArrayList<MessageItem>()
@@ -60,10 +73,12 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_message)
         createUI()
+        initAdapter()
+
     }
 
     override fun onDestroy() {
-        channel?.removeListener(this@MessageActivity)
+        channel?.removeListener(this@MessageActivityNew)
         super.onDestroy()
     }
 
@@ -85,8 +100,8 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
             val channelsObject = basicClient.chatClient!!.channels
             channelsObject.getChannel(channelSid, ChatCallbackListener<Channel>() {
                 channel = it
-                channel!!.addListener(this@MessageActivity)
-                this@MessageActivity.title = (if (channel!!.type == ChannelType.PUBLIC) "PUB " else "PRIV ") + channel!!.friendlyName
+                channel!!.addListener(this@MessageActivityNew)
+                this@MessageActivityNew.title = (if (channel!!.type == ChannelType.PUBLIC) "PUB " else "PRIV ") + channel!!.friendlyName
 
                 setupListView(channel!!)
 
@@ -303,12 +318,12 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
                             },
                             object : SimpleRecyclerAdapter.CreateViewHolder<Member>() {
                                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SettableViewHolder<Member> {
-                                    return MemberViewHolder(this@MessageActivity, parent)
+                                    return MemberViewHolder(this@MessageActivityNew, parent)
                                 }
                             },
                             channel!!.members.membersList)
 
-                    view.layoutManager = LinearLayoutManager(this@MessageActivity).apply {
+                    view.layoutManager = LinearLayoutManager(this@MessageActivityNew).apply {
                         orientation = LinearLayoutManager.VERTICAL
                     }
                 }
@@ -384,14 +399,12 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
                 }
             }
             adapter.clear()
-            adapter.addItems(messageItemList)
+            for (item in messageItemList) adapter.addToStart(item, true)
             adapter.notifyDataSetChanged()
         })
     }
 
     private fun setupInput() {
-
-
         // Setup our input methods. Enter key on the keyboard or pushing the send button
 //        messageInput.apply {
 //            addTextChangedListener(object : TextWatcher {
@@ -414,15 +427,31 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
 
         inputMessage.setTypingListener(object : MessageInput.TypingListener {
             override fun onStartTyping() {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+                if (channel != null) {
+                    channel!!.typing()
+                }
             }
 
             override fun onStopTyping() {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+
             }
         })
 
+        inputMessage.setInputListener {
+            sendMessage()
+            true
+        }
 
+        inputMessage.setAttachmentsListener(object : MessageInput.AttachmentsListener {
+            override fun onAddAttachments() {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                this@MessageActivityNew.startActivityForResult(intent, FILE_REQUEST)
+
+            }
+        })
 
 
 //        sendButton.apply {
@@ -433,7 +462,7 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
 //                    addCategory(Intent.CATEGORY_OPENABLE)
 //                    type = "*/*"
 //                }
-//                this@MessageActivity.startActivityForResult(intent, FILE_REQUEST)
+//                this@MessageActivityNew.startActivityForResult(intent, FILE_REQUEST)
 //                true
 //            }
 //        }
@@ -451,6 +480,92 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
         }
     }
 
+//    override fun onSubmit(input: CharSequence): Boolean {
+//        adapter.addToStart(
+//                MessagesFixtures.getTextMessage(input.toString()), true)
+//        return true
+//    }
+//
+//    override fun onAddAttachments() {
+//        adapter.addToStart(MessagesFixtures.getImageMessage(), true)
+//    }
+
+    override fun format(date: Date): String {
+        return if (DateFormatter.isToday(date)) {
+            getString(R.string.date_header_today)
+        } else if (DateFormatter.isYesterday(date)) {
+            getString(R.string.date_header_yesterday)
+        } else {
+            DateFormatter.format(date, DateFormatter.Template.STRING_DAY_MONTH_YEAR)
+        }
+    }
+
+    private fun initAdapter() {
+        adapter = MessagesListAdapter<MessageItem>(identity, ImageLoader { imageView, url ->
+            Picasso.get().load(url).resize(400, 300).into(imageView)
+//            for (item in messageItemList) {
+//                if (item.message.hasMedia())
+//                    if (item.message.media.sid.equals(url)) {
+//                        var media = item.message.media
+//                        val sid = media.sid
+//                        val type = media.type
+//                        val fn = media.fileName
+//                        val size = media.size
+//
+//                        try {
+//                            if (type!!.contentEquals("image/*")) {
+//                                val out = ByteArrayOutputStream()
+//                                media.download(out, object : StatusListener() {
+//                                    override fun onSuccess() {
+//                                        var content = out.toString()
+//                                    }
+//
+//                                    override fun onError(error: ErrorInfo) {
+//                                    }
+//                                }, object : ProgressListener() {
+//                                    override fun onProgress(p0: Long) {
+//                                    }
+//
+//                                    override fun onCompleted(p0: String?) {
+//                                    }
+//
+//                                    override fun onStarted() {
+//                                    }
+//
+//                                })
+//                            }
+//                        } catch (e: Exception) {
+//                            debug(e); }
+
+//                        val deferred = CompletableDeferred<String>()
+//                        try {
+//                            val outStream = openFileOutput(media.sid, Context.MODE_PRIVATE)
+//                            media.download(outStream, ChatStatusListener {
+//                                debug { "Download completed" }
+//                                var bitmapdata = outStream.toString().toByteArray()
+//                                var bitmap = BitmapFactory.decodeByteArray(bitmapdata, 0, bitmapdata.size)
+//                            }, object : ProgressListener() {
+//                                override fun onStarted() = debug { "Start media download" }
+//                                override fun onProgress(bytes: Long) = debug { "Media download progress - bytes done: ${bytes}" }
+//                                override fun onCompleted(mediaSid: String) {
+//                                    debug { "Media download completed" }
+//                                    deferred.complete(mediaSid)
+//                                }
+//
+//                            })
+//                        } catch (e: Exception) {
+//                            error { "Failed to download media - error: ${e.message}" }
+//                            deferred.completeExceptionally(e)
+//                        }
+//                    }
+//            }
+        })
+        adapter.enableSelectionMode(this)
+//        adapter.setLoadMoreListener(this)
+        adapter.setDateHeadersFormatter(this)
+        message_list_view.setAdapter(adapter)
+    }
+
     private fun setupListView(channel: Channel) {
 //        message_list_view.viewTreeObserver.addOnScrollChangedListener {
 //            if (message_list_view.lastVisiblePosition >= 0 && message_list_view.lastVisiblePosition < adapter.itemCount) {
@@ -461,49 +576,58 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
 //            }
 //        }
 
-        adapter = SimpleRecyclerAdapter<MessageItem>(
-                ItemClickListener { _: MessageItem, viewHolder, _ ->
-                    (viewHolder as MessageViewHolder).toggleDateVisibility()
-                },
-                object : SimpleRecyclerAdapter.CreateViewHolder<MessageItem>() {
-                    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SettableViewHolder<MessageItem> {
-                        return MessageViewHolder(this@MessageActivity, parent);
-                    }
-                })
-
-        adapter.setLongClickListener(
-                ItemLongClickListener { message: MessageItem, _, _ ->
-                    selector("Select an option", MESSAGE_OPTIONS) { dialog, which ->
-                        when (which) {
-                            REMOVE -> {
-                                dialog.cancel()
-                                channel.messages.removeMessage(
-                                        message.message, ToastStatusListener(
-                                        "Successfully removed message. It should be GONE!!",
-                                        "Error removing message") {
-                                    messageItemList.remove(message)
-                                    adapter.notifyDataSetChanged()
-                                })
-                            }
-                            EDIT -> showUpdateMessageDialog(message.message)
-                            GET_ATTRIBUTES -> {
-                                try {
-                                    TwilioApplication.instance.showToast(message.message.attributes.toString())
-                                } catch (e: JSONException) {
-                                    TwilioApplication.instance.showToast("Error parsing message attributes")
-                                }
-                            }
-                            SET_ATTRIBUTES -> showUpdateMessageAttributesDialog(message.message)
-                        }
-                    }
-                    true
+        adapter.setOnMessageClickListener(object : MessagesListAdapter.OnMessageClickListener<MessageItem> {
+            override fun onMessageClick(message: MessageItem?) {
+                if (message != null) {
+                    toast(message.message.author.toString())
                 }
-        )
+            }
 
-        message_list_view.adapter = adapter
-        message_list_view.layoutManager = LinearLayoutManager(this).apply {
-            orientation = LinearLayoutManager.VERTICAL
-        }
+        })
+//
+//        adapter = SimpleRecyclerAdapter<MessageItem>(
+//                ItemClickListener { _: MessageItem, viewHolder, _ ->
+//                    (viewHolder as MessageViewHolderNew).toggleDateVisibility()
+//                },
+//                object : SimpleRecyclerAdapter.CreateViewHolder<MessageItem>() {
+//                    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SettableViewHolder<MessageItem> {
+//                        return MessageViewHolderNew(this@MessageActivityNew, parent);
+//                    }
+//                })
+//
+//        adapter.setLongClickListener(
+//                ItemLongClickListener { message: MessageItem, _, _ ->
+//                    selector("Select an option", MESSAGE_OPTIONS) { dialog, which ->
+//                        when (which) {
+//                            REMOVE -> {
+//                                dialog.cancel()
+//                                channel.messages.removeMessage(
+//                                        message.message, ToastStatusListener(
+//                                        "Successfully removed message. It should be GONE!!",
+//                                        "Error removing message") {
+//                                    messageItemList.remove(message)
+//                                    adapter.notifyDataSetChanged()
+//                                })
+//                            }
+//                            EDIT -> showUpdateMessageDialog(message.message)
+//                            GET_ATTRIBUTES -> {
+//                                try {
+//                                    TwilioApplication.instance.showToast(message.message.attributes.toString())
+//                                } catch (e: JSONException) {
+//                                    TwilioApplication.instance.showToast("Error parsing message attributes")
+//                                }
+//                            }
+//                            SET_ATTRIBUTES -> showUpdateMessageAttributesDialog(message.message)
+//                        }
+//                    }
+//                    true
+//                }
+//        )
+//
+//        message_list_view.adapter = adapter
+//        message_list_view.layoutManager = LinearLayoutManager(this).apply {
+//            orientation = LinearLayoutManager.VERTICAL
+//        }
 
         loadAndShowMessages()
     }
@@ -517,7 +641,7 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
     }
 
     private fun sendMessage() {
-        val input = inputMessage.inputEditText.text.toString();
+        val input = inputMessage.inputEditText.text.toString()
         if (input != "") {
             sendMessage(input)
         }
@@ -599,7 +723,36 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
         debug { "Received onSynchronizationChanged callback for ${channel.friendlyName}" }
     }
 
-    data class MessageItem(val message: Message, val members: Members, internal var currentUser: String);
+    data class MessageItem(val message: Message, val members: Members, internal var currentUser: String) : IMessage, MessageContentType.Image {
+        override fun getImageUrl(): String? {
+            if (message.hasMedia())
+                return "https://i.ebayimg.com/images/g/scAAAOSwCGVX3n3S/s-l1600.jpg"
+            else return null
+        }
+
+        override fun getId(): String {
+            return message.sid
+        }
+
+        override fun getCreatedAt(): Date {
+            return message.dateCreatedAsDate
+        }
+
+        override fun getUser(): IUser {
+            var author: Author
+            for (item in members.membersList) {
+                if (item.identity === message.author) {
+                    author = Author(item)
+                    return author
+                }
+            }
+            return object : Author(members.membersList.get(0)) {}
+        }
+
+        override fun getText(): String {
+            return message.messageBody ?: message.media.fileName
+        }
+    }
 
     companion object {
         private val MESSAGE_OPTIONS = listOf("Remove", "Edit", "Get Attributes", "Edit Attributes")
@@ -626,4 +779,6 @@ class MessageActivity : Activity(), ChannelListener, AnkoLogger {
 
         private val FILE_REQUEST = 1000;
     }
+
+
 }

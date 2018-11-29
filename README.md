@@ -1,10 +1,5 @@
 # Chat Application Overview
 
-
-![](https://img.shields.io/badge/SDK%20version-3.1.0-blue.svg)
-
-## Getting Started
-
 Welcome to the Chat Demo application.  This application demonstrates a basic chat client with the ability to create and join channels, invite other members into the channels and exchange messages.
 
 What you'll minimally need to get started:
@@ -57,6 +52,3 @@ Run `gradle build` to fetch Twilio SDK files and build application.
 
 You can import this project into Android Studio if you so desire by selecting `Import Project (Eclipse ADT, Gradle, etc)` from the menu and then build using Studio's Build menu.
 
-## License
-
-MIT
